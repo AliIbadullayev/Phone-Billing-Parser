@@ -1,6 +1,5 @@
 package com.intern.parser.pojo;
 
-import java.text.SimpleDateFormat;
 import java.util.Date;
 
 public class PhoneBilling {

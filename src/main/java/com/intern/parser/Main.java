@@ -10,7 +10,9 @@ public class Main {
     public static void main(String[] args) {
         Parser parser = new Parser();
         HashMap<String, List<PhoneBilling>> phoneBillingHashMap = parser.parseFile("cdr.txt");
-        parser.createReport(phoneBillingHashMap.values().stream().filter(phoneBillings -> phoneBillings.size()>1).findFirst().orElse(null));
-
+        for (List<PhoneBilling> phoneBilling :
+                phoneBillingHashMap.values()) {
+            parser.createReport(phoneBilling);
+        }
     }
 }

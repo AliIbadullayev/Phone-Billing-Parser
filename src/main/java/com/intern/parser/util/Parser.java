@@ -1,15 +1,20 @@
 package com.intern.parser.util;
 
 import com.intern.parser.exception.NotFoundTariffException;
+import com.intern.parser.exception.RoundingException;
 import com.intern.parser.pojo.PhoneBilling;
-
 import java.io.*;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.util.*;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 import java.util.stream.Collectors;
+import static com.intern.parser.util.BillingUtils.*;
 
 public class Parser {
+
+    Logger logger = Logger.getLogger(Parser.class.getName());
 
     public HashMap<String, List<PhoneBilling>> parseFile(String inputFile){
         try {
@@ -23,24 +28,14 @@ public class Parser {
                 phoneBillingHashMap.put(phoneBilling.getPhoneNumber(), list);
             }
             bufferedReader.close();
+            logger.info("Successfully parsed file: " + inputFile);
             return phoneBillingHashMap;
         } catch (IOException | ParseException ioException){
-            System.err.println(ioException.getMessage());
+            logger.log(Level.WARNING, "Cannot parse file because of: " +ioException.getMessage());
             return null;
         }
     }
 
-    private PhoneBilling getBillsFromLine(String line) throws ParseException {
-        String[] strings = line.split(",\\s+");
-        PhoneBilling phoneBilling = new PhoneBilling();
-        phoneBilling.setPhoneNumber(strings[1]);
-        phoneBilling.setIncoming(strings[0].equals("02"));
-        SimpleDateFormat parser = new SimpleDateFormat("yyyyMMddHHmmss");
-        phoneBilling.setStartTime(parser.parse(strings[2]));
-        phoneBilling.setEndTime(parser.parse(strings[3]));
-        phoneBilling.setTariff(strings[4]);
-        return phoneBilling;
-    }
     public void createReport(List<PhoneBilling> phoneBillingList) {
         try {
             long resultTime = 0L;
@@ -77,50 +72,9 @@ public class Parser {
             bufferedWriter.write("-".repeat(76).concat("\n"));
             bufferedWriter.flush();
             bufferedWriter.close();
-
-        } catch (IOException e) {
-            throw new RuntimeException(e);
+            logger.info("Successfully created report file: " +file.getName());
+        } catch (IOException | NotFoundTariffException | RoundingException e) {
+            logger.log(Level.WARNING, "Cannot create report file for "+phoneBillingList.get(0).getPhoneNumber()+" because of: " +e.getMessage());
         }
     }
-
-    public static String center(String text, int len){
-        if (len <= text.length())
-            return text.substring(0, len);
-        int before = (len - text.length())/2;
-        if (before == 0)
-            return String.format("%-" + len + "s", text);
-        int rest = len - before;
-        return String.format("%" + before + "s%-" + rest + "s", "", text);
-    }
-
-    private InputStream getResourcesInputStream(String input){
-        InputStream ioStream = this.getClass()
-                .getClassLoader()
-                .getResourceAsStream(input);
-
-        if (ioStream == null) {
-            throw new IllegalArgumentException(input + " is not found");
-        }
-        return ioStream;
-    }
-
-    private int getRounding(int seconds, int minutes){
-        if (seconds >= 30) minutes++;
-        return minutes;
-    }
-
-    private double getCallCost(int duration, long resultTime, boolean isIncoming, String tariff){
-        switch (tariff) {
-            case "06":
-                if (resultTime > 300) return duration;
-                else return 0;
-            case "03":
-                return duration * 1.5;
-            case "11":
-                return isIncoming ? 0 : resultTime > 100 ? duration * 1.5 : duration * 0.5;
-            default:
-                throw new NotFoundTariffException("Not found tariff with type: " + tariff);
-        }
-    }
-
 }
